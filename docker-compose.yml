@@ -1,13 +1,10 @@
 services:
   catenicus:
-    # Option A (CI/CD via GitHub Container Registry): replace <github-user>/<repo> with your repo
-    # image: ghcr.io/<github-user>/<repo>:latest
-    # Option B (Build directly on NAS):
-    build: .
+    image: ghcr.io/pinkcloudsummer/catenicus_film-photog_assistant:latest
     container_name: catenicus-film-assistant
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "3002:3001"   # Exposes Catenicus on NAS port 3002 (since airquality_dashboard uses 3001)
     environment:
       - PORT=3001
       - HOST=0.0.0.0
@@ -16,11 +13,34 @@ services:
       # Mount your NAS shared film archive directory here (persists catenicus.sqlite + rolls/ folders)
       - ./data:/data
 
-  # Optional: Automatic CD updater — polls GHCR every 5 minutes and restarts Catenicus when a new commit builds
-  # watchtower:
-  #   image: containrrr/watchtower
-  #   container_name: catenicus-watchtower
-  #   restart: unless-stopped
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   command: --interval 300 --cleanup catenicus-film-assistant
+  # GitHub Actions self-hosted runner — triggers instant deploy on `git push`
+  # Start with: docker compose --profile cicd up -d
+  github-runner:
+    profiles: [cicd]
+    image: myoung34/github-runner:latest
+    container_name: catenicus_github_runner
+    environment:
+      REPO_URL: https://github.com/pinkcloudsummer/catenicus_film-photog_assistant
+      ACCESS_TOKEN: ${GITHUB_RUNNER_TOKEN}   # set in .env file next to this compose file
+      RUNNER_NAME: catenicus-nas-runner
+      LABELS: self-hosted,nas
+      RUNNER_WORKDIR: /tmp/runner/work
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /volume2/docker:/volume2/docker
+    restart: unless-stopped
+
+  # Watchtower remains as a 5-minute background fallback (same as aqm_project and ad_tds)
+  watchtower:
+    profiles: [cicd]
+    image: containrrr/watchtower:latest
+    container_name: catenicus_watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_POLL_INTERVAL: "300"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_LABEL_ENABLE: "false"
+    command: catenicus-film-assistant
+    restart: unless-stopped
+
