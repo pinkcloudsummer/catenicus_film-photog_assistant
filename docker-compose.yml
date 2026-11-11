@@ -1,0 +1,26 @@
+services:
+  catenicus:
+    # Option A (CI/CD via GitHub Container Registry): replace <github-user>/<repo> with your repo
+    # image: ghcr.io/<github-user>/<repo>:latest
+    # Option B (Build directly on NAS):
+    build: .
+    container_name: catenicus-film-assistant
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - CATENICUS_DATA_DIR=/data
+    volumes:
+      # Mount your NAS shared film archive directory here (persists catenicus.sqlite + rolls/ folders)
+      - ./data:/data
+
+  # Optional: Automatic CD updater — polls GHCR every 5 minutes and restarts Catenicus when a new commit builds
+  # watchtower:
+  #   image: containrrr/watchtower
+  #   container_name: catenicus-watchtower
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: --interval 300 --cleanup catenicus-film-assistant

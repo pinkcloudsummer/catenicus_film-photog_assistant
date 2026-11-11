@@ -1,0 +1,10 @@
+{
+  "name": "Catenicus Film Photography Assistant",
+  "short_name": "Catenicus",
+  "description": "Camera light meter, multi-roll film tracker, and NAS EXIF metadata mapper",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "portrait"
+}
